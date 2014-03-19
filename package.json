@@ -1,0 +1,15 @@
+{
+  "name": "nestor-downloads-transmission",
+  "version": "0.0.1",
+  "description": "Nestor transmission downloads plugin",
+  "main": "transmission.js",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/nestormc/nestor-downloads-transmission.git"
+  },
+  "author": "Nicolas Joyard <joyard.nicolas@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "transmission": "*"
+  }
+}
