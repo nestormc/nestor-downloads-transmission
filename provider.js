@@ -74,9 +74,6 @@ Client.prototype.request = function(method, args) {
 function Torrent(client, data) {
 	this.data = data;
 	this.client = client;
-
-	console.log("created torrent:");
-	console.dir(data);
 }
 
 var states = [
@@ -100,9 +97,6 @@ var allTorrentFields = [
 Torrent.prototype = {
 	update: function(data) {
 		this.data = data;
-
-		console.log("updated torrent:");
-		console.dir(data);
 	},
 
 	get id()           { return this.data.id; },
@@ -152,10 +146,11 @@ Torrent.prototype = {
 module.exports = function(pluginConfig) {
 	var client;
 	var incoming;
+	var logger;
 
 	var torrents = {};
 
-	var UPDATE_INTERVAL = 30000;
+	var UPDATE_INTERVAL = 1000;
 	var initialGetDone = false;
 	var updateTimeout = null;
 
@@ -196,11 +191,17 @@ module.exports = function(pluginConfig) {
 					}
 				});
 			}
+		})
+		.otherwise(function(err) {
+			logger.warn("Transmission update error: %s", err);
+			setTimeout(updateTorrents, UPDATE_INTERVAL);
 		});
 	}
 
 	return {
-		init: function(mongoose, logger, config) {
+		init: function(mongoose, logger_, config) {
+			logger = logger_;
+
 			client = new Client(
 				pluginConfig.host,
 				pluginConfig.port,
@@ -214,29 +215,23 @@ module.exports = function(pluginConfig) {
 		},
 
 		get downloads() {
-			return updateTorrents()
-			.then(function() {
-				return Object.keys(torrents).map(function(id) {
-					return torrents[id];
-				});
+			return Object.keys(torrents).map(function(id) {
+				return torrents[id];
 			});
 		},
 
 		get stats() {
-			return updateTorrents()
-			.then(function() {
-				return Object.keys(torrents).reduce(function(stats, id) {
-					var torrent = torrents[id];
+			return Object.keys(torrents).reduce(function(stats, id) {
+				var torrent = torrents[id];
 
-					if (torrent.status !== 0) {
-						stats.active++;
-						stats.uploadRate += torrent.rateUpload;
-						stats.downloadRate += torrent.rateDownload;
-					}
+				if (torrent.state !== "paused") {
+					stats.active++;
+					stats.uploadRate += torrent.uploadRate;
+					stats.downloadRate += torrent.downloadRate;
+				}
 
-					return stats;
-				}, { active: 0, uploadRate: 0, downloadRate: 0 });
-			});
+				return stats;
+			}, { active: 0, uploadRate: 0, downloadRate: 0 });
 		},
 
 		getDownload: function(id) {
