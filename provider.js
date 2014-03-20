@@ -3,6 +3,7 @@
 
 var request = require("request");
 var util = require("util");
+var url = require("url");
 var when = require("when");
 
 
@@ -77,18 +78,71 @@ function Torrent(client, data) {
 	console.dir(data);
 }
 
+var states = [
+	/* 0 */ "paused",
+	/* 1 */ "initializing",
+	/* 2 */ "initializing",
+	/* 3 */ "initializing",
+	/* 4 */ "downloading",
+	/* 5 */ "seeding",
+	/* 6 */ "seeding",
+	/* 7 */ "initializing"
+];
+
+var allTorrentFields = [
+	"id", "name", "status", "sizeWhenDone", "errorString",
+	"rateDownload", "peersSendingToUs",
+	"uploadedEver", "rateUpload", "peersGettingFromUs",
+	"files", "isFinished",
+];
+
 Torrent.prototype = {
+	get id()           { return this.data.id; },
 	get name()         { return this.data.name; },
 	get state()        { return states[this.data.status]; },
 	get size()         { return this.data.sizeWhenDone; },
 	get error()        { return this.data.errorString; },
-	get downloaded()   { return this.data.downloadedEver; },
 	get downloadRate() { return this.data.rateDownload; },
 	get seeders()      { return this.data.peersSendingToUs; },
 	get uploaded()     { return this.data.uploadedEver; },
 	get uploadRate()   { return this.data.rateUpload; },
 	get leechers()     { return this.data.peersGettingFromUs; },
-	get files()        { return this.data.files; }
+
+	get downloaded() {
+		return this.data.files.reduce(function(total, file) {
+			return total + file.bytesCompleted;
+		}, 0);
+	},
+
+	get files() {
+		return this.data.files.reduce(function(files, file) {
+			files[file.name] = file.length;
+			return files;
+		}, {});
+	},
+
+	cancel: function() {
+		this.client.request("torrent-remove", {
+			"ids": [ this.data.id ],
+			"delete-local-data": !this.data.isFinished
+		});
+	},
+
+	pause: function() {
+		this.client.request("torrent-stop", {
+			"ids": [ this.data.id ]
+		});
+	},
+
+	resume: function() {
+		this.client.request("torrent-start", {
+			"ids": [ this.data.id ]
+		});
+	},
+
+	retry: function() {
+		// No-op
+	}
 };
 
 
@@ -111,10 +165,7 @@ module.exports = function(pluginConfig) {
 
 		get downloads() {
 			return client.request("torrent-get", {
-				"fields": [ "id", "name", "status", "sizeWhenDone", "errorString",
-							"downloadedEver", "rateDownload", "peersSendingToUs",
-							"uploadedEver", "rateUpload", "peersGettingFromUs",
-							"files" ]
+				"fields": allTorrentFields
 			}).then(function(args) {
 				return args.torrents.map(function(torrent) {
 					return new Torrent(client, torrent);
@@ -139,7 +190,14 @@ module.exports = function(pluginConfig) {
 		},
 
 		getDownload: function(id) {
-			return;
+			return client.request("torrent-get", {
+				"fields": allTorrentFields,
+				"ids": [ Number(id) ]
+			}).then(function(args) {
+				if (args.torrents.length) {
+					return new Torrent(client, args.torrents[0]);
+				}
+			});
 		},
 
 		addDownload: function(uri) {
@@ -150,15 +208,31 @@ module.exports = function(pluginConfig) {
 		},
 
 		canDownload: function(uri) {
+			var parsed = url.parse(uri, true);
+
+			if (parsed.protocol === "magnet:") {
+				var urns = parsed.query.xt;
+
+				if (!Array.isArray(urns)) {
+					urns = [urns];
+				}
+
+				return urns.some(function(urn) {
+					if (urn.match(/^urn:btih:/)) {
+						return true;
+					}
+				});
+			}
+
 			return false;
 		},
 
 		pause: function() {
-
+			client.request("torrent-stop", {});
 		},
 
 		resume: function() {
-
+			client.request("torrent-start", {});
 		}
 	};
 };
