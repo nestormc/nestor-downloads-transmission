@@ -75,6 +75,7 @@ function Torrent(client, data) {
 	this.data = data;
 	this.client = client;
 
+	console.log("created torrent:");
 	console.dir(data);
 }
 
@@ -91,28 +92,30 @@ var states = [
 
 var allTorrentFields = [
 	"id", "name", "status", "sizeWhenDone", "errorString",
-	"rateDownload", "peersSendingToUs",
+	"haveValid", "rateDownload", "peersSendingToUs",
 	"uploadedEver", "rateUpload", "peersGettingFromUs",
 	"files", "isFinished",
 ];
 
 Torrent.prototype = {
+	update: function(data) {
+		this.data = data;
+
+		console.log("updated torrent:");
+		console.dir(data);
+	},
+
 	get id()           { return this.data.id; },
 	get name()         { return this.data.name; },
 	get state()        { return states[this.data.status]; },
 	get size()         { return this.data.sizeWhenDone; },
 	get error()        { return this.data.errorString; },
+	get downloaded()   { return this.data.haveValid; },
 	get downloadRate() { return this.data.rateDownload; },
 	get seeders()      { return this.data.peersSendingToUs; },
 	get uploaded()     { return this.data.uploadedEver; },
 	get uploadRate()   { return this.data.rateUpload; },
 	get leechers()     { return this.data.peersGettingFromUs; },
-
-	get downloaded() {
-		return this.data.files.reduce(function(total, file) {
-			return total + file.bytesCompleted;
-		}, 0);
-	},
 
 	get files() {
 		return this.data.files.reduce(function(files, file) {
@@ -150,6 +153,52 @@ module.exports = function(pluginConfig) {
 	var client;
 	var incoming;
 
+	var torrents = {};
+
+	var UPDATE_INTERVAL = 30000;
+	var initialGetDone = false;
+	var updateTimeout = null;
+
+	function updateTorrents(id) {
+		if (updateTimeout) {
+			clearTimeout(updateTimeout);
+			updateTimeout = null;
+		}
+
+		var query = { fields: allTorrentFields };
+
+		if (id) {
+			query.ids = [id];
+		} else if (initialGetDone) {
+			query.ids = "recently-active";
+		}
+
+		return client.request("torrent-get", query)
+		.then(function(args) {
+			setTimeout(updateTorrents, UPDATE_INTERVAL);
+
+			if (!id && !initialGetDone) {
+				initialGetDone = true;
+			}
+
+			if ("removed" in args) {
+				args.removed.forEach(function(removed) {
+					delete torrents[removed.id];
+				});
+			}
+
+			if ("torrents" in args) {
+				args.torrents.forEach(function(torrent) {
+					if (torrent.id in torrents) {
+						torrents[torrent.id].update(torrent);
+					} else {
+						torrents[torrent.id] = new Torrent(client, torrent);
+					}
+				});
+			}
+		});
+	}
+
 	return {
 		init: function(mongoose, logger, config) {
 			client = new Client(
@@ -161,23 +210,24 @@ module.exports = function(pluginConfig) {
 			);
 
 			incoming = config.incoming || ".";
+			updateTorrents();
 		},
 
 		get downloads() {
-			return client.request("torrent-get", {
-				"fields": allTorrentFields
-			}).then(function(args) {
-				return args.torrents.map(function(torrent) {
-					return new Torrent(client, torrent);
+			return updateTorrents()
+			.then(function() {
+				return Object.keys(torrents).map(function(id) {
+					return torrents[id];
 				});
 			});
 		},
 
 		get stats() {
-			return client.request("torrent-get", {
-				"fields": [ "status", "rateDownload", "rateUpload" ]
-			}).then(function(args) {
-				return args.torrents.reduce(function(stats, torrent) {
+			return updateTorrents()
+			.then(function() {
+				return Object.keys(torrents).reduce(function(stats, id) {
+					var torrent = torrents[id];
+
 					if (torrent.status !== 0) {
 						stats.active++;
 						stats.uploadRate += torrent.rateUpload;
@@ -190,13 +240,11 @@ module.exports = function(pluginConfig) {
 		},
 
 		getDownload: function(id) {
-			return client.request("torrent-get", {
-				"fields": allTorrentFields,
-				"ids": [ Number(id) ]
-			}).then(function(args) {
-				if (args.torrents.length) {
-					return new Torrent(client, args.torrents[0]);
-				}
+			var numericId = Number(id);
+
+			return updateTorrents(numericId)
+			.then(function() {
+				return torrents[numericId];
 			});
 		},
 
