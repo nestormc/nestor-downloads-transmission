@@ -76,9 +76,9 @@ Client.prototype.updateTorrents = function(id) {
 
 		if ("removed" in args) {
 			args.removed.forEach(function(removed) {
-				if (removed.id in self.torrents) {
-					self.emit("remove", self.torrents[removed.id]);
-					delete self.torrents[removed.id];
+				if (removed in self.torrents) {
+					self.emit("remove", self.torrents[removed]);
+					delete self.torrents[removed];
 				}
 			});
 		}
@@ -166,7 +166,7 @@ Client.prototype.getDownload = function(id) {
 
 
 Client.prototype.addDownload = function(uri) {
-	return this.request("add-torrent", {
+	return this.request("torrent-add", {
 		"filename": uri,
 		"download-dir": this.incoming
 	});
