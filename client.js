@@ -76,7 +76,10 @@ Client.prototype.updateTorrents = function(id) {
 
 		if ("removed" in args) {
 			args.removed.forEach(function(removed) {
-				delete self.torrents[removed.id];
+				if (removed.id in self.torrents) {
+					self.emit("remove", self.torrents[removed.id]);
+					delete self.torrents[removed.id];
+				}
 			});
 		}
 
@@ -87,6 +90,8 @@ Client.prototype.updateTorrents = function(id) {
 				} else {
 					self.torrents[torrent.id] = new Torrent(self, torrent);
 				}
+
+				self.emit("update", self.torrents[torrent.id]);
 			});
 		}
 	})
