@@ -96,7 +96,7 @@ Client.prototype.updateTorrents = function(id) {
 		}
 	})
 	.otherwise(function(err) {
-		self.logger.warn("Transmission update error: %s", err);
+		self.logger.warn("Transmission update error: %s", err.message || err);
 		self.updateTimeout = setTimeout(self.updateTorrents.bind(self), UPDATE_INTERVAL);
 	});
 };
