@@ -2,7 +2,7 @@
 "use strict";
 
 
-var provider = require("./provider");
+var TransmissionClient = require("./client");
 
 
 /*!
@@ -16,7 +16,18 @@ function transmissionPlugin(nestor) {
 	var intents = nestor.intents;
 
 	intents.on("nestor:startup", function() {
-		intents.emit("downloads:provider", "transmission", provider(config));
+		intents.emit(
+			"downloads:provider",
+			"transmission",
+			new TransmissionClient(
+				logger,
+				config.host,
+				config.port,
+				config.username,
+				config.password,
+				config.url
+			)
+		);
 	});
 }
 
