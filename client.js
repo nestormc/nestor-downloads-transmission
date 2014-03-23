@@ -179,6 +179,10 @@ Client.prototype.canDownload = function(uri) {
 	if (parsed.protocol === "magnet:") {
 		var urns = parsed.query.xt;
 
+		if (!urns) {
+			return false;
+		}
+
 		if (!Array.isArray(urns)) {
 			urns = [urns];
 		}
