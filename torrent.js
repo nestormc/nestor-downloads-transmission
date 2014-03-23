@@ -26,11 +26,14 @@ var states = [
 Torrent.prototype = {
 	update: function(data) {
 		this.data = data;
+
+		if (this._finished && this.data.state !== 0) {
+			this.pause();
+		}
 	},
 
 	get id()           { return this.data.id; },
 	get name()         { return this.data.name; },
-	get state()        { return states[this.data.status]; },
 	get size()         { return this.data.sizeWhenDone; },
 	get error()        { return this.data.errorString; },
 	get downloaded()   { return this.data.haveValid; },
@@ -39,6 +42,22 @@ Torrent.prototype = {
 	get uploaded()     { return this.data.uploadedEver; },
 	get uploadRate()   { return this.data.rateUpload; },
 	get leechers()     { return this.data.peersGettingFromUs; },
+
+	get _finished() {
+		return this.data.haveValid > 0 && this.data.haveValid === this.data.sizeWhenDone;
+	},
+
+	get state() {
+		if (this._finished) {
+			return "complete";
+		}
+
+		if (this.data.error) {
+			return "error";
+		}
+
+		return states[this.data.status];
+	},
 
 	get files() {
 		return this.data.files.reduce(function(files, file) {
@@ -50,7 +69,7 @@ Torrent.prototype = {
 	cancel: function() {
 		this.client.request("torrent-remove", {
 			"ids": [ this.data.id ],
-			"delete-local-data": !this.data.isFinished
+			"delete-local-data": !this._finished
 		});
 	},
 

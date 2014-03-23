@@ -20,7 +20,7 @@ var TORRENT_FIELDS = [
 	"id", "name", "status", "sizeWhenDone", "errorString",
 	"haveValid", "rateDownload", "peersSendingToUs",
 	"uploadedEver", "rateUpload", "peersGettingFromUs",
-	"files", "isFinished",
+	"files", "error", "errorString"
 ];
 
 
@@ -226,7 +226,7 @@ Object.defineProperties(Client.prototype, {
 			return Object.keys(this.torrents).reduce(function(stats, id) {
 				var torrent = self.torrents[id];
 
-				if (torrent.state !== "paused") {
+				if (["paused", "error", "complete"].indexOf(torrent.state) === -1) {
 					stats.active++;
 					stats.uploadRate += torrent.uploadRate;
 					stats.downloadRate += torrent.downloadRate;
