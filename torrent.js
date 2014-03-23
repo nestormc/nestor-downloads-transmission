@@ -67,7 +67,9 @@ Torrent.prototype = {
 	},
 
 	retry: function() {
-		// No-op
+		this.client.request("torrent-start", {
+			"ids": [ this.data.id ]
+		});
 	}
 };
 
