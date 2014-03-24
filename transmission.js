@@ -34,8 +34,12 @@ function transmissionPlugin(nestor) {
 		intents.emit(
 			"downloads:filehandler",
 			"application/x-bittorrent",
-			function(file, callback) {
+			function(file, source, callback) {
 				client.addDownload(file);
+				if (source) {
+					source.cancel();
+				}
+
 				callback();
 			}
 		);
