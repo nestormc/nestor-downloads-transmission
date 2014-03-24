@@ -16,17 +16,28 @@ function transmissionPlugin(nestor) {
 	var intents = nestor.intents;
 
 	intents.on("nestor:startup", function() {
-		intents.emit(
-			"downloads:provider",
-			"transmission",
-			new TransmissionClient(
+		var client = new TransmissionClient(
 				logger,
 				config.host,
 				config.port,
 				config.username,
 				config.password,
 				config.url
-			)
+			);
+
+		intents.emit(
+			"downloads:provider",
+			"transmission",
+			client
+		);
+
+		intents.emit(
+			"downloads:filehandler",
+			"application/x-bittorrent",
+			function(file, callback) {
+				client.addDownload(file);
+				callback();
+			}
 		);
 	});
 }
