@@ -1,6 +1,8 @@
 /*jshint node:true*/
 "use strict";
 
+var path = require("path");
+
 
 /*!
  * Torrent object
@@ -67,8 +69,10 @@ Torrent.prototype = {
 	},
 
 	get files() {
+		var self = this;
+
 		return this.data.files.reduce(function(files, file) {
-			files[file.name] = file.length;
+			files[path.join(self.client.incoming, file.name)] = file.length;
 			return files;
 		}, {});
 	},
