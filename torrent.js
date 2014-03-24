@@ -10,6 +10,8 @@
 function Torrent(client, data) {
 	this.data = data;
 	this.client = client;
+
+	this._alreadyFinished = this._finished;
 }
 
 var states = [
@@ -26,6 +28,11 @@ var states = [
 Torrent.prototype = {
 	update: function(data) {
 		this.data = data;
+
+		if (this._finished && !this._alreadyFinished) {
+			this._alreadyFinished = true;
+			this.client.emit("complete", this);
+		}
 
 		if (this._finished && this.data.state !== 0) {
 			this.pause();
