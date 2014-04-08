@@ -78,27 +78,43 @@ Torrent.prototype = {
 	},
 
 	cancel: function() {
-		this.client.request("torrent-remove", {
+		var client = this.client;
+
+		client.request("torrent-remove", {
 			"ids": [ this.data.id ],
 			"delete-local-data": !this._finished
+		}).then(function() {
+			client.updateTorrents();
 		});
 	},
 
 	pause: function() {
-		this.client.request("torrent-stop", {
+		var client = this.client;
+
+		client.request("torrent-stop", {
 			"ids": [ this.data.id ]
+		}).then(function() {
+			client.updateTorrents();
 		});
 	},
 
 	resume: function() {
-		this.client.request("torrent-start", {
+		var client = this.client;
+
+		client.request("torrent-start", {
 			"ids": [ this.data.id ]
+		}).then(function() {
+			client.updateTorrents();
 		});
 	},
 
 	retry: function() {
-		this.client.request("torrent-start", {
+		var client = this.client;
+
+		client.request("torrent-start", {
 			"ids": [ this.data.id ]
+		}).then(function() {
+			client.updateTorrents();
 		});
 	}
 };

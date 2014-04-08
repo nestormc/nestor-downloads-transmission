@@ -128,6 +128,7 @@ Client.prototype.request = function(method, args) {
 	var self = this;
 	var d = when.defer();
 
+	this.logger.debug("Request: %j", options);
 	request(options, function(err, response, data) {
 		if (err) {
 			return d.reject(err);
@@ -166,10 +167,18 @@ Client.prototype.getDownload = function(id) {
 
 
 Client.prototype.addDownload = function(uri) {
-	return this.request("torrent-add", {
+	var self = this;
+
+	var request = this.request("torrent-add", {
 		"filename": uri,
 		"download-dir": this.incoming
 	});
+
+	request.then(function() {
+		self.updateTorrents();
+	});
+
+	return request;
 };
 
 
@@ -199,12 +208,22 @@ Client.prototype.canDownload = function(uri) {
 
 
 Client.prototype.pause = function() {
-	this.request("torrent-stop", {});
+	var self = this;
+
+	this.request("torrent-stop", {})
+	.then(function() {
+		self.updateTorrents();
+	});
 };
 
 
 Client.prototype.resume = function() {
-	this.request("torrent-start", {});
+	var self = this;
+
+	this.request("torrent-start", {})
+	.then(function() {
+		self.updateTorrents();
+	});
 };
 
 
