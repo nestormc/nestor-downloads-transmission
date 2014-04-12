@@ -50,7 +50,10 @@ function transmissionPlugin(nestor) {
 transmissionPlugin.manifest = {
 	name: "downloads-transmission",
 	description: "Transmission bittorrent downloads",
-	dependencies: ["nestor-downloads"]
+	dependencies: ["nestor-downloads"],
+	client: {
+		public: __dirname + "/client/public"
+	}
 };
 
 

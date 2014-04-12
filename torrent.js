@@ -41,6 +41,8 @@ Torrent.prototype = {
 		}
 	},
 
+	icon: "downloads-transmission:transmission",
+
 	get id()           { return this.data.id; },
 	get name()         { return this.data.name; },
 	get size()         { return this.data.sizeWhenDone; },
