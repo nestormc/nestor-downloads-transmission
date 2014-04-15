@@ -74,7 +74,7 @@ Torrent.prototype = {
 		var self = this;
 
 		return this.data.files.reduce(function(files, file) {
-			files[path.join(self.client.incoming, file.name)] = file.length;
+			files[file.name] = file.length;
 			return files;
 		}, {});
 	},
